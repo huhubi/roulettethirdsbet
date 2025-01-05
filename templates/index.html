@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roulette Simulator</title>
+    <script src="https://cdn.socket.io/4.5.3/socket.io.min.js"></script>
+    <script>
+        const socket = io();
+
+        socket.on('game_update', data => {
+            const result = data.result;
+            document.getElementById('result').textContent = `Ergebnis: ${result.number} (${result.third})`;
+            document.getElementById('balance').textContent = `Guthaben: ${data.balance}€`;
+            document.getElementById('result_text').textContent = data.result_text;
+
+            const stats = data.statistics;
+            const statsDiv = document.getElementById('statistics');
+            statsDiv.innerHTML = `<h4>Statistik: ${stats.total_games} Spiele</h4>`;
+            for (let key in stats.third_probs) {
+                statsDiv.innerHTML += `${key}: ${stats.third_probs[key].toFixed(2)}%<br>`;
+            }
+        });
+
+        function placeBet() {
+            const third = document.querySelector('input[name="third"]:checked').value;
+            const amount = parseInt(document.getElementById('bet_amount').value);
+
+            fetch('/place_bet', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ third, amount })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert(data.message);
+                }
+            });
+        }
+
+        function resetBalance() {
+            fetch('/reset', { method: 'POST' })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                document.getElementById('balance').textContent = `Guthaben: ${data.balance}€`;
+            });
+        }
+    </script>
+</head>
+<body>
+    <h1>Roulette Simulator</h1>
+    <h2 id="balance">Guthaben: 100€</h2>
+
+    <h3>Setze auf ein Drittel:</h3>
+    <form onsubmit="event.preventDefault(); placeBet();">
+        <label>
+            <input type="radio" name="third" value="1. Drittel" checked> 1. Drittel (1–12)
+        </label><br>
+        <label>
+            <input type="radio" name="third" value="2. Drittel"> 2. Drittel (13–24)
+        </label><br>
+        <label>
+            <input type="radio" name="third" value="3. Drittel"> 3. Drittel (25–36)
+        </label><br>
+        <label>
+            Einsatz (in €):
+            <input type="number" id="bet_amount" min="1">
+        </label>
+        <button type="submit">Setzen</button>
+    </form>
+
+    <button onclick="resetBalance()">Guthaben zurücksetzen</button>
+
+    <h3 id="result">Ergebnis: Noch kein Spiel gestartet.</h3>
+    <h4 id="result_text"></h4>
+    <div id="statistics">Statistik: Noch keine Spiele.</div>
+</body>
+</html>
